@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #ffffff;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            color: #000;
+        }
+
+        #sudoku-board {
+            display: grid;
+            grid-template-columns: repeat(9, 50px);
+            grid-template-rows: repeat(9, 50px);
+            border: 2px solid #fff; /* Dış çerçeve */
+            background-color: #fff;
+            gap: 1px; /* Hücreler arası ince beyaz çizgiler için */
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #000;
+        }
+
+        /* Görseldeki pembe tonları */
+        .bg-light-pink {
+            background-color: #fadadd; /* Açık pembe */
+        }
+
+        .bg-dark-pink {
+            background-color: #f19c9e; /* Koyu pembe */
+        }
+
+        /* Kullanıcının veri gireceği input alanları */
+        input.sudoku-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333; /* Girilen sayılar biraz daha farklı renkte olsun istersen değiştirebilirsin */
+            outline: none;
+            cursor: pointer;
+        }
+
+        input.sudoku-input:focus {
+            background-color: rgba(255, 255, 255, 0.5); /* Tıklanınca hafif parlasın */
+        }
+
+        /* Inputlardaki yukarı/aşağı oklarını gizleme (Chrome, Safari, Edge, Opera) */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Inputlardaki yukarı/aşağı oklarını gizleme (Firefox) */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Sudoku</h1>
+    <div id="sudoku-board"></div>
+
+    <script>
+        // Görseldeki tamamen çözülmüş tahta dizilimi (Referans için)
+        const solution = [
+            [5, 3, 4, 6, 7, 8, 9, 1, 2],
+            [6, 7, 2, 1, 9, 5, 3, 4, 8],
+            [1, 9, 8, 3, 4, 2, 5, 6, 7],
+            [8, 5, 9, 7, 6, 1, 4, 2, 3],
+            [4, 2, 6, 8, 5, 3, 7, 9, 1],
+            [7, 1, 3, 9, 2, 4, 8, 5, 6],
+            [9, 6, 1, 5, 3, 7, 2, 8, 4],
+            [2, 8, 7, 4, 1, 9, 6, 3, 5],
+            [3, 4, 5, 2, 8, 6, 1, 7, 9]
+        ];
+
+        // Oynanabilir başlangıç tahtası (0 olan yerler boş kutu olacak)
+        const initialBoard = [
+            [5, 3, 0, 0, 7, 0, 9, 1, 2],
+            [6, 0, 2, 1, 9, 5, 0, 4, 8],
+            [0, 9, 8, 0, 4, 0, 5, 6, 7],
+            [8, 5, 0, 7, 6, 1, 4, 0, 3],
+            [4, 0, 6, 8, 0, 3, 7, 9, 1],
+            [7, 1, 3, 9, 2, 4, 0, 5, 0],
+            [9, 6, 1, 0, 3, 7, 2, 8, 4],
+            [2, 0, 7, 4, 1, 0, 6, 0, 5],
+            [3, 4, 5, 2, 0, 6, 1, 7, 9]
+        ];
+
+        const boardElement = document.getElementById('sudoku-board');
+
+        // Tahtayı oluşturma fonksiyonu
+        function createBoard() {
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    const cellValue = initialBoard[row][col];
+                    const cellDiv = document.createElement('div');
+                    cellDiv.classList.add('cell');
+
+                    // 3x3'lük bloklara göre arka plan rengini belirleme (Görseldeki desen)
+                    const blockRow = Math.floor(row / 3);
+                    const blockCol = Math.floor(col / 3);
+                    if ((blockRow + blockCol) % 2 === 0) {
+                        cellDiv.classList.add('bg-light-pink');
+                    } else {
+                        cellDiv.classList.add('bg-dark-pink');
+                    }
+
+                    // Eğer hücre doluysa direkt yazdır, boşsa input alanı ekle
+                    if (cellValue !== 0) {
+                        cellDiv.textContent = cellValue;
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.min = 1;
+                        input.max = 9;
+                        input.classList.add('sudoku-input');
+                        
+                        // Kullanıcının 1-9 arası tek rakam girmesini kısıtla
+                        input.addEventListener('input', function() {
+                            if (this.value.length > 1) {
+                                this.value = this.value.slice(0, 1);
+                            }
+                            if (this.value < 1 || this.value > 9) {
+                                this.value = '';
+                            }
+                        });
+                        
+                        cellDiv.appendChild(input);
+                    }
+
+                    boardElement.appendChild(cellDiv);
+                }
+            }
+        }
+
+        // Sayfa yüklendiğinde tahtayı çiz
+        createBoard();
+    </script>
+</body>
+</html>
